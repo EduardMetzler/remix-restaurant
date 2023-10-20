@@ -1,5 +1,9 @@
 import { cssBundleHref } from "@remix-run/css-bundle";
-import type { LinksFunction } from "@remix-run/node";
+import {
+  json,
+  type LinksFunction,
+  type LoaderFunctionArgs,
+} from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -7,19 +11,70 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
+  useRevalidator,
 } from "@remix-run/react";
+import { createSupabaseServerClient } from "./@/lib/supabase.server";
 
-import stylesheet from "~/tailwind.css";
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/auth-helpers-remix";
 
 export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: stylesheet },
+  ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
 ];
 
-// export const links: LinksFunction = () => [
-//   ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
-// ];
+export async function loader({ request, params }: LoaderFunctionArgs) {
+  const env = {
+    SUPABASE_URL: process.env.SUPABASE_URL!,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
+  };
+
+  const response = new Response();
+  const supabase = createSupabaseServerClient({ request, response });
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return json({ env, session }, { headers: response.headers });
+}
 
 export default function App() {
+  const { env, session } = useLoaderData<typeof loader>();
+  const revalidator = useRevalidator();
+  const [supabase] = useState(() =>
+    createBrowserClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY)
+  );
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      revalidator.revalidate();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  const up = () => {
+    supabase.auth.signUp({
+      email: "",
+      password: "000000",
+    });
+  };
+  const ins = async () => {
+    const res = await supabase.auth.signInWithPassword({
+      email: "",
+      password: "000000",
+    });
+    console.log(res);
+  };
+
+  const out = () => {
+    supabase.auth.signOut();
+  };
   return (
     <html lang="en">
       <head>
@@ -29,7 +84,11 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <Outlet />
+        <Outlet context={{ supabase, session }} />
+        <button onClick={up}>up</button>
+        <button onClick={ins}>in</button>
+        <button onClick={out}>out</button>
+
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
