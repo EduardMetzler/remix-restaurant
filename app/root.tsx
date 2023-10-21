@@ -69,7 +69,6 @@ export default function App() {
       email: "",
       password: "000000",
     });
-    console.log(res);
   };
 
   const out = () => {
