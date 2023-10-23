@@ -1,4 +1,6 @@
 import { cssBundleHref } from "@remix-run/css-bundle";
+import "./tailwind.css";
+
 import {
   json,
   type LinksFunction,
@@ -18,6 +20,7 @@ import { createSupabaseServerClient } from "./@/lib/supabase.server";
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/auth-helpers-remix";
+import Header from "./@/components/header";
 
 export const links: LinksFunction = () => [
   ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
@@ -83,10 +86,17 @@ export default function App() {
         <Links />
       </head>
       <body>
+        <Header session={session} signOut={() => supabase.auth.signOut()} />
         <Outlet context={{ supabase, session }} />
-        <button onClick={up}>up</button>
-        <button onClick={ins}>in</button>
-        <button onClick={out}>out</button>
+        <button className="py-20 px-0" onClick={up}>
+          up
+        </button>
+        <button className="py-20 px-0" onClick={ins}>
+          in
+        </button>
+        <button className="py-20 px-0" onClick={out}>
+          out
+        </button>
 
         <ScrollRestoration />
         <Scripts />
